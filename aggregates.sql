@@ -71,3 +71,45 @@ SELECT name, SUM(revenue) as totalRevenue
 FROM table1
 GROUP BY name 
 ORDER BY totalRevenue
+
+-- Produce a list of facilities with a total revenue less than 1000. Produce an output table consisting of facility name and revenue, sorted by revenue. Remember that there's a different cost for guests and members!
+WITH table1 AS
+(
+    SELECT f.name,
+    CASE
+        WHEN m.memid = 0 THEN b.slots * f.guestcost
+        ELSE b.slots * f.membercost
+    END AS revenue
+    FROM members m 
+    JOIN bookings b 
+    ON m.memid = b.memid
+    JOIN facilities f 
+    ON b.facid = f.facid
+)
+
+,table2 AS
+(
+    SELECT name, SUM(revenue) as totalRevenue
+    FROM table1
+    GROUP BY name 
+    ORDER BY totalRevenue
+)
+
+SELECT *
+FROM table2
+WHERE totalRevenue>=50
+
+--Output the facility id that has the highest number of slots booked. For bonus points, try a version without a LIMIT clause. This version will probably look messy!
+WITH table1 AS
+(
+    SELECT facid, SUM(slots) as totalSlots
+    FROM bookings
+    GROUP BY facid
+)
+SELECT facid, totalSlots
+FROM table1
+WHERE totalSlots = (
+    SELECT MAX(totalSlots)
+    FROM table1
+)
+
