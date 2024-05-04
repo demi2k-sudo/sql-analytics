@@ -224,4 +224,50 @@ END AS revenue
 FROM table3
 
 -- Based on the 3 complete months of data so far, calculate the amount of time each facility will take to repay its cost of ownership. Remember to take into account ongoing monthly maintenance. Output facility name and payback time in months, order by facility name. Don't worry about differences in month lengths, we're only looking for a rough value here!
+WITH table1 AS
+(
+    SELECT f.name,
+    CASE
+        WHEN m.memid = 0 THEN b.slots * f.guestcost
+        ELSE b.slots * f.membercost
+    END AS revenue, monthlymaintenance,initialoutlay
+    FROM members m 
+    JOIN bookings b 
+    ON m.memid = b.memid
+    JOIN facilities f 
+    ON b.facid = f.facid
+)
 
+,table2 AS
+(
+    SELECT name, -1*initialoutlay/(SUM(revenue)/3 - monthlymaintenance) as months
+    FROM table1
+    GROUP BY name, monthlymaintenance, initialoutlay
+    ORDER BY months
+)
+SELECT *
+FROM table2
+
+-- For each day in January 2024, calculate a rolling average of total revenue over the previous 15 days. Output should contain date and revenue columns, sorted by the date. Remember to account for the possibility of a day having zero revenue. This one's a bit tough, so don't be afraid to check out the hint!
+WITH table1 AS
+(
+    SELECT DATE(book.starttime),
+    AVG(SUM(
+        CASE
+        WHEN book.memid = 0 THEN facs.guestcost
+        ELSE facs.membercost
+        END  * book.slots
+    )) OVER(
+        ORDER BY DATE(book.starttime)
+        ROWS BETWEEN 14 PRECEDING
+        AND CURRENT ROW
+    ) AS revenue
+
+    FROM bookings book JOIN facilities facs
+    ON book.facid = facs.facid
+    GROUP BY DATE(book.starttime)
+)
+
+SELECT *
+FROM table1
+WHERE EXTRACT(month from date) = 1
